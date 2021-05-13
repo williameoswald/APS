@@ -15,10 +15,22 @@ disp "`first'"
 local n_vars: word count `vars'
 disp "`n_vars'"
 
-*Adding postfile for p-values and flexibility for Wald tests - need to finish forward stepwise
 */
 
+*Debugging
+local xtab_step = 1
+local crude_step = 1
+local be_step = 1
+local fs_step = 1
+local final_step = 1
+local format_step = 1
+
+capture log close
+log using "`results'/Analysis_`logpart'.log", replace
+
 capture postutil clear
+
+********************************************************************************
 
 tempfile pvals
 postfile test str35 varname str10 crude_chi2 str10 crude_pvalue using `pvals'
@@ -267,6 +279,45 @@ merge m:1 varname using `finalpvals', nogen
 save `finalresults', replace
 
 use `xtabs', clear
-merge 1:1 varname value using `finalresults', nogen
+merge 1:1 varname value using `finalresults', gen(finalmerge)
+
+log close
+
+********************************************************************************
+if 1==`format_step' {//Format final table output
+
+replace final_pr = "--" if finalmerge==1
+replace final_chi2 = "--" if finalmerge==1
+replace final_pvalue = "--" if finalmerge==1
+
+drop finalmerge
+
+replace crude_chi2 = "--" if varname=="Overall"
+replace crude_pvalue = "--" if varname=="Overall"
 
 sort n
+
+bysort varname (n): gen first = _n == 1
+
+expand 2 if first
+
+sort n
+
+gen n2 = _n
+
+bysort var (n2): gen n3 = _n
+
+	foreach var of varlist value overall pos crude_pr crude_chi2 crude_pvalue final_pr final_chi2 final_pvalue {
+		replace `var' = "" if n3==1
+
+	}
+
+
+sort n2
+
+bysort varname (n2): replace varname = "" if _n!=1
+
+sort n2
+
+drop first n* 
+}
