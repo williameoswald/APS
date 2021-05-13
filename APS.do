@@ -6,7 +6,7 @@
 local outcome trinfect
 
 *Specify variables of interest
-unab vars:  sex age_group asinfect hkinfect watersource toilet_at_home toilet clean_latrines f_visible_prev_cat drinking_water hk_prev_cat as_prev_cat tr_prev_cat deworming
+unab vars:  
 disp "`vars'"
 
 local first: word 1 of `vars'
@@ -16,14 +16,6 @@ local n_vars: word count `vars'
 disp "`n_vars'"
 
 */
-
-*Debugging
-local xtab_step = 1
-local crude_step = 1
-local be_step = 1
-local fs_step = 1
-local final_step = 1
-local format_step = 1
 
 capture log close
 log using "`results'/Analysis_`logpart'.log", replace
@@ -38,6 +30,8 @@ postfile test str35 varname str10 crude_chi2 str10 crude_pvalue using `pvals'
 tempfile xtabs
 postfile result str35 varname str35 value str35 overall str35 pos str35 crude_pr using `xtabs'
 
+********************************************************************************
+*Get overall prevalence
 tab `outcome', matcell(Z)
 
 *Local with total count
@@ -63,7 +57,8 @@ local pos = "`pos_n'" + "`pos_den'" + " (" + "`pos_p'" + ")"
 
 post result ("Overall") ("--") ("--") ("`pos'") ("--")
 
-*Get positive count and prevalence by factors
+********************************************************************************
+*Get prevalence by specified factors, crude prevalence ratios, and chi2 test results
 local varct = 0
 foreach var in `vars' {
 	local varct = `varct' + 1
@@ -174,6 +169,9 @@ merge m:1 varname using `pvals', nogen
 
 save `xtabs', replace
 
+********************************************************************************
+*Get final adjusted model based on all possible subsets
+
 use `analysis', clear
 
 *Make a macro called tuples with all of your control variables
@@ -196,11 +194,13 @@ postclose models
 
 use `allsubsets', clear
 
+*Identify final model based on minimum BIC
 sort bic
 local selvars = model[1]
 disp "`selvars'"
 
-***FINAL MODEL***
+********************************************************************************
+*Get final model results
 use `analysis', clear
 
 local finalvars 
@@ -284,7 +284,7 @@ merge 1:1 varname value using `finalresults', gen(finalmerge)
 log close
 
 ********************************************************************************
-if 1==`format_step' {//Format final table output
+*Format final table output
 
 replace final_pr = "--" if finalmerge==1
 replace final_chi2 = "--" if finalmerge==1
@@ -320,4 +320,3 @@ bysort varname (n2): replace varname = "" if _n!=1
 sort n2
 
 drop first n* 
-}
