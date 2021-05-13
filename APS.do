@@ -165,7 +165,11 @@ postclose test
 
 use `xtabs', clear
 gen n = _n
-merge m:1 varname using `pvals', nogen
+merge m:1 varname using `pvals', gen(merge)
+replace crude_pr = "--" if merge==1
+replace crude_chi2 = "--" if merge==1
+replace crude_pvalue = "--" if merge==1
+drop merge
 
 save `xtabs', replace
 
@@ -292,9 +296,6 @@ replace final_pvalue = "--" if finalmerge==1
 
 drop finalmerge
 
-replace crude_chi2 = "--" if varname=="Overall"
-replace crude_pvalue = "--" if varname=="Overall"
-
 sort n
 
 bysort varname (n): gen first = _n == 1
@@ -307,16 +308,16 @@ gen n2 = _n
 
 bysort var (n2): gen n3 = _n
 
-	foreach var of varlist value overall pos crude_pr crude_chi2 crude_pvalue final_pr final_chi2 final_pvalue {
-		replace `var' = "" if n3==1
+foreach var of varlist value overall pos crude_pr final_pr {
+	replace `var' = "" if n3==1
 
-	}
-
-
-sort n2
-
-bysort varname (n2): replace varname = "" if _n!=1
+}
+foreach var of varlist varname crude_chi2 crude_pvalue final_chi2 final_pvalue {
+	replace `var' = "" if n3!=1
+}
 
 sort n2
 
 drop first n* 
+
+compress
