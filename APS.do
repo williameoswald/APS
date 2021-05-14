@@ -17,8 +17,8 @@ disp "`n_vars'"
 
 */
 
-capture log close
-log using "`results'/Analysis_`logpart'.log", replace
+*capture log close
+*log using "`results'/Analysis_`logpart'.log", replace
 
 capture postutil clear
 
@@ -285,7 +285,7 @@ save `finalresults', replace
 use `xtabs', clear
 merge 1:1 varname value using `finalresults', gen(finalmerge)
 
-log close
+*log close
 
 ********************************************************************************
 *Format final table output
