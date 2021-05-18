@@ -55,7 +55,7 @@ else {
 
 local pos = "`pos_n'" + "`pos_den'" + " (" + "`pos_p'" + ")"
 
-post result ("Overall") ("--") ("--") ("`pos'") ("--")
+post result ("Overall") ("--") ("`tot_n' (100.00)") ("`pos'") ("--")
 
 ********************************************************************************
 *Get prevalence by specified factors, crude prevalence ratios, and chi2 test results
