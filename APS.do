@@ -24,11 +24,8 @@ capture postutil clear
 
 ********************************************************************************
 
-tempfile pvals
-postfile test str35 varname str10 crude_chi2 str10 crude_pvalue using `pvals'
-
 tempfile xtabs
-postfile result str35 varname str35 value str35 overall str35 pos str35 crude_pr using `xtabs'
+postfile result str35 varname str35 valuelabel str35 value str35 overall str35 pos str35 expb str10 pvalue str7 tablepart str2 n2 using `xtabs'
 
 ********************************************************************************
 *Get overall prevalence
@@ -55,7 +52,7 @@ else {
 
 local pos = "`pos_n'" + "`pos_den'" + " (" + "`pos_p'" + ")"
 
-post result ("Overall") ("--") ("`tot_n' (100.00)") ("`pos'") ("--")
+post result ("Overall") ("--") ("--") ("--") ("`pos'") ("--") ("--") ("overall") ("")
 
 ********************************************************************************
 *Get prevalence by specified factors, crude prevalence ratios, and chi2 test results
@@ -93,93 +90,80 @@ foreach var in `vars' {
 		local pval : di %3.2f `r(p)'
 	}
 	
-	post test ("`var'") ("`chi2'") ("`pval'")
+	post result ("`var'") ("") ("") ("") ("") ("") ("`pval'") ("stat") ("")
 	
 	forvalues i = 1/`levelmax' {
 
 		*Store varname
-		local var`i' = `"`var'"'
-		di `" "`var`i''" "'
+		local var = `"`var'"'
+		di `" "`var'" "'
 
-		*Scalar with current value (won't work with non-numeric)
-		scalar val`i' = Y[`i',1]
-		di val`i'
-
-		local getval`i' = val`i'
+		*Current level value
+		local value = Y[`i',1]
+		di `" "`value'" "'
 
 		*Get value label for current value
-		local vallbl`i' : label `lblname' `getval`i''
-		di `" "`vallbl`i''" "'
+		local vallbl : label `lblname' `value'
+		di `" "`vallbl'" "'
 
-		*Local with value total
-		local val_n`i' = X[`i',1] + X[`i',2]
-		di `val_n`i''
+		*Local with row marginal total
+		local val_n = X[`i',1] + X[`i',2]
+		di `val_n'
 		
-		*Local with value percentage of total
-		local val_p`i' : di %3.2f `val_n`i''/`tot_n'*100
-		di `val_p`i''
+		*Local with row percentage of overall total
+		local val_p : di %3.2f `val_n'/`tot_n'*100
+		di `val_p'
 		
-		*Local with value count - positive
-		local pos_n`i' = X[`i',2]
-		di `pos_n`i''
+		*Local with count of positives within level
+		local pos_n = X[`i',2]
+		di `pos_n'
 
-		*Local with pos denominator
-		local pos_den`i' = `val_n`i''
-		di `pos_den`i''
+		*Local with pos denominator, uses row marginal total
+		local pos_den = `val_n'
+		di `pos_den'
 		
 		*Local with percentage - positive
-		local pos_p`i' : di %3.2f `pos_n`i''/`pos_den`i''*100
-		di `pos_p`i''
+		local pos_p : di %3.2f `pos_n'/`pos_den'*100
+		di `pos_p'
 
 		if `den'==1 {
-			local overall_den`i' = " / " + "`tot_n'"
-			local pos_den`i' = " / " + "`pos_den`i''"
+			local overall_den = " / " + "`tot_n'"
+			local pos_den = " / " + "`pos_den'"
 		}
 		else {
-			local overall_den`i' = ""
-			local pos_den`i' = ""
+			local overall_den = ""
+			local pos_den = ""
 		}
 		
-		local overall`i' = "`val_n`i''" + "`overall_den`i''" + " (" + "`val_p`i''" + ")"
+		local overall = "`val_n'" + "`overall_den'" + " (" + "`val_p'" + ")"
 		
-		local pos`i' = "`pos_n`i''" + "`pos_den`i''" + " (" + "`pos_p`i''" + ")"
+		local pos = "`pos_n'" + "`pos_den'" + " (" + "`pos_p'" + ")"
 
 		if `i'==1 {
-			local pr`i' = "REF"
+			local pr = "REF"
 		}
 		else {
 			*Store coefficient and confidence interval
-			local expb`i' : di %3.2f Z[1, `i']
-			local ll`i' : di %3.2f Z[5, `i']
-			local ul`i' : di %3.2f Z[6, `i']
+			local expb : di %3.2f Z[1, `i']
+			local ll : di %3.2f Z[5, `i']
+			local ul : di %3.2f Z[6, `i']
 
-			local pr`i' = "`expb`i''" + " (" + "`ll`i''" + ", " + "`ul`i''" + ")"
+			local pr = "`expb'" + " (" + "`ll'" + ", " + "`ul'" + ")"
 		}
 		
-		post result ("`var`i''") ("`vallbl`i''") ("`overall`i''") ("`pos`i''") ("`pr`i''")
-
+		post result ("`var'") ("`vallbl'") ("`value'") ("`overall'") ("`pos'") ("`pr'") ("") ("model") ("`value'")
 	}
-}
+} 
 postclose result
-postclose test
 
 use `xtabs', clear
-gen n = _n
-merge m:1 varname using `pvals', gen(merge)
-replace crude_pr = "--" if merge==1
-replace crude_chi2 = "--" if merge==1
-replace crude_pvalue = "--" if merge==1
-drop merge
-
-save `xtabs', replace
-
-********************************************************************************
+/********************************************************************************
 *Get final adjusted model based on all possible subsets
 
 use `analysis', clear
 
 *Make a macro called tuples with all of your control variables
-tuples `vars', asis display
+tuples `vars', asis //display
 
 tempfile allsubsets
 tempname memhold
@@ -203,31 +187,68 @@ sort bic
 local selvars = model[1]
 disp "`selvars'"
 
-********************************************************************************
+********************************************************************************/
 *Get final model results
 use `analysis', clear
 
+*TEMPORARY STEP
+local selvars = "ses site_id mobile_phone"
+
 local finalvars 
 foreach var in `selvars' {
-	local ivar = "i.`var'"
-	local finalvars = "`finalvars'" + "`ivar' "
+	local finalvars = "`finalvars'" + " i.`var'"
 }
-	
+
 poisson `outcome' `finalvars', irr vce(cluster `vce') 
 	
-mat Z = r(table)
+*Output matrix with regression results
+mat Z = r(table)'
 mat li Z
 
-tempfile finalpvals
-postfile test2 str35 varname str10 final_chi2 str10 final_pvalue using `finalpvals'
+tokenize "`:rownames Z'" //tokenize splits string into pieces referred to by `1',`2', etc
+local rows : rowsof Z //get count of rows
 
-foreach var in `finalvars' {
-	testparm `var'
+preserve
+
+clear
+svmat Z, names(col) //convert matrix to dataset
+gen rowname = ""
+
+forvalues t=1/`rows' {
+	replace rowname = "``t''" if _n==`t' //populate variable with rownames extracted from matrix
+}
+
+drop if rowname=="_cons"
+
+split rowname, parse(".")
+rename rowname2 varname
 	
-	local varname = subinstr("`var'", "i.", "", 1)
+tostring b, replace format(%3.2f) force
+tostring ll, replace format(%3.2f) force
+tostring ul, replace format(%3.2f) force
+
+gen final_expb = "REF"
+replace final_expb = b + " (" + ll + ", " + ul + ")" if !strpos(rowname1,"b")
+
+replace rowname1 = subinstr(rowname1,"b","",.)
+replace rowname1 = subinstr(rowname1,"o","",.)
+rename rowname1 n2
+		
+keep varname final_expb n2
+
+tempfile final
+save `final'
+
+restore
+
+tempfile FINAL_p
+postfile FINAL_p str35 varname str10 final_p str7 tablepart using `FINAL_p'
+
+foreach var in `selvars' {
 	
-	local chi2 : di %3.2f `r(chi2)'
-	
+	di "Test `var'"
+	testparm i.`var'
+			
 	if `r(p)'<0.01 {
 		local pval = "<0.01"
 	}
@@ -235,89 +256,52 @@ foreach var in `finalvars' {
 		local pval : di %3.2f `r(p)'
 	}
 	
-	post test2 ("`varname'") ("`chi2'") ("`pval'")
+	post FINAL_p ("`var'")  ("`pval'") ("stat")
 }
-
-tempfile finalresults
-postfile result2 str35 varname str35 value str35 final_pr using `finalresults'
-
-local colsZ : colsof Z
-local colsZnocons = `colsZ'-1
-local colnamesZ : colnames Z
-forvalues j = 1/`colsZnocons' {
-	
-	local colname : word `j' of `colnamesZ'
-	di "`colname'"
-	local colval = substr("`colname'", 1, 1)
-	di "`colval'"
-	local pos = strpos("`colname'", ".") +1
-	local varname = substr("`colname'", `pos', .)
-	di "`varname'"
-	*Get label name for variable
-	local lblname : value label `varname'
-	di "`lblname'"
-	*Get value label for current value
-	local vallbl : label `lblname' `colval'
-	di `" "`vallbl'" "'
-	
-	if `colval'==1 {
-		local pr = "REF"
-	}
-	else {
-		*Store coefficient and confidence interval
-		local expb : di %3.2f Z[1, `j']
-		local ll : di %3.2f Z[5, `j']
-		local ul : di %3.2f Z[6, `j']
-
-		local pr = "`expb'" + " (" + "`ll'" + ", " + "`ul'" + ")"
-	}
-
-	post result2 ("`varname'") ("`vallbl'") ("`pr'")
-}
-postclose test2
-postclose result2
-
-use `finalresults', clear
-merge m:1 varname using `finalpvals', nogen
-
-save `finalresults', replace
-
-use `xtabs', clear
-merge 1:1 varname value using `finalresults', gen(finalmerge)
-
-*log close
+postclose FINAL_p
 
 ********************************************************************************
+if `log'==1 {
+log off
+}
 *Format final table output
+use `xtabs', clear
 
-replace final_pr = "--" if finalmerge==1
-replace final_chi2 = "--" if finalmerge==1
-replace final_pvalue = "--" if finalmerge==1
+gen n = _n
 
-drop finalmerge
+preserve
+
+keep if tablepart!="model"
+
+merge 1:1 varname tablepart using `FINAL_p', gen(finalpmerge)
+
+tempfile other
+save `other'
+
+restore
+
+keep if tablepart=="model"
+
+merge 1:1 varname n2 using `final', gen(finalmerge)
+
+append using `other'
 
 sort n
 
-bysort varname (n): gen first = _n == 1
+drop finalpmerge finalmerge
 
-expand 2 if first
+bysort varname (n2): replace varname = "" if _n!=1
 
 sort n
 
-gen n2 = _n
+drop tablepart n n2
 
-bysort var (n2): gen n3 = _n
-
-foreach var of varlist value overall pos crude_pr final_pr {
-	replace `var' = "" if n3==1
-
-}
-foreach var of varlist varname crude_chi2 crude_pvalue final_chi2 final_pvalue {
-	replace `var' = "" if n3!=1
-}
-
-sort n2
-
-drop first n* 
+order varname valuelabel value overall pos expb pvalue final_expb final_p
 
 compress
+
+save `xtabs', replace
+
+if `log'==1 {
+log on
+}
