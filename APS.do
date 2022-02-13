@@ -157,7 +157,7 @@ foreach var in `vars' {
 postclose result
 
 use `xtabs', clear
-/********************************************************************************
+********************************************************************************
 *Get final adjusted model based on all possible subsets
 
 use `analysis', clear
@@ -187,12 +187,9 @@ sort bic
 local selvars = model[1]
 disp "`selvars'"
 
-********************************************************************************/
+********************************************************************************
 *Get final model results
 use `analysis', clear
-
-*TEMPORARY STEP
-local selvars = "ses site_id mobile_phone"
 
 local finalvars 
 foreach var in `selvars' {
