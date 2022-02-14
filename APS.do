@@ -40,7 +40,7 @@ local pos_n = Z[2,1]
 di `pos_n'
 
 *Local with percentage
-local pos_p : di %3.2f `pos_n'/`tot_n'*100
+local pos_p : di %3.1f `pos_n'/`tot_n'*100
 di `pos_p'
 
 if `den'==1 {
@@ -81,7 +81,7 @@ foreach var in `vars' {
 
 	testparm `ivar'
 	
-	local chi2 : di %3.2f `r(chi2)'
+	local chi2 : di %3.1f `r(chi2)'
 	
 	if `r(p)'<0.01 {
 		local pval = "<0.01"
@@ -111,7 +111,7 @@ foreach var in `vars' {
 		di `val_n'
 		
 		*Local with row percentage of overall total
-		local val_p : di %3.2f `val_n'/`tot_n'*100
+		local val_p : di %3.1f `val_n'/`tot_n'*100
 		di `val_p'
 		
 		*Local with count of positives within level
@@ -123,7 +123,7 @@ foreach var in `vars' {
 		di `pos_den'
 		
 		*Local with percentage - positive
-		local pos_p : di %3.2f `pos_n'/`pos_den'*100
+		local pos_p : di %3.1f `pos_n'/`pos_den'*100
 		di `pos_p'
 
 		if `den'==1 {
@@ -144,9 +144,9 @@ foreach var in `vars' {
 		}
 		else {
 			*Store coefficient and confidence interval
-			local expb : di %3.2f Z[1, `i']
-			local ll : di %3.2f Z[5, `i']
-			local ul : di %3.2f Z[6, `i']
+			local expb : di %3.1f Z[1, `i']
+			local ll : di %3.1f Z[5, `i']
+			local ul : di %3.1f Z[6, `i']
 
 			local pr = "`expb'" + " (" + "`ll'" + ", " + "`ul'" + ")"
 		}
@@ -220,9 +220,9 @@ drop if rowname=="_cons"
 split rowname, parse(".")
 rename rowname2 varname
 	
-tostring b, replace format(%3.2f) force
-tostring ll, replace format(%3.2f) force
-tostring ul, replace format(%3.2f) force
+tostring b, replace format(%3.1f) force
+tostring ll, replace format(%3.1f) force
+tostring ul, replace format(%3.1f) force
 
 gen final_expb = "REF"
 replace final_expb = b + " (" + ll + ", " + ul + ")" if !strpos(rowname1,"b")
