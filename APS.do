@@ -247,7 +247,7 @@ restore
 tempfile FINAL_p
 postfile FINAL_p str35 varname str10 final_p str7 tablepart using `FINAL_p'
 
-foreach var in `selvars' {
+foreach var in `selvars' `adj_vars' {
 	
 	di "Test `var'"
 	testparm i.`var'
