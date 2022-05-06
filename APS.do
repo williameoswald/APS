@@ -163,14 +163,20 @@ use `xtabs', clear
 use `analysis', clear
 
 *Make a macro called tuples with all of your control variables
-tuples `vars', asis //display
+tuples `modelvars', asis //display
+
+local i_adjvars
+foreach k in `adj_vars' {
+    local i_adjvars = "`i_adjvars'" + " i.`k'"
+}
+di "Adjustment variables: `i_adjvars'"
 
 tempfile allsubsets
 tempname memhold
 postfile models str100 model obs aic bic using `allsubsets'
 
 forvalues i=1/`ntuples'{ 
-	quietly poisson nonresponse `tuple`i'', irr vce(cluster `vce') 
+	quietly poisson nonresponse `tuple`i'' `i_adjvars', irr vce(cluster `vce') 
 	quietly estat ic
 	mat s=r(S)
 	local obs=s[1,1]
@@ -196,7 +202,7 @@ foreach var in `selvars' {
 	local finalvars = "`finalvars'" + " i.`var'"
 }
 
-poisson `outcome' `finalvars', irr vce(cluster `vce') 
+poisson `outcome' `finalvars' `i_adjvars', irr vce(cluster `vce') 
 	
 *Output matrix with regression results
 mat Z = r(table)'
